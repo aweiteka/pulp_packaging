@@ -14,11 +14,14 @@ RUN yum install -y git findutils && \
 
 # install pulp_docker plugin to manage docker image repositories
 #RUN git clone --single-branch https://github.com/pulp/pulp_docker.git /opt/pulp_docker
-ADD pulp_docker-0.1.1-1.tar /opt/pulp_docker/
+ADD python-pulp-docker-common-0.1.1-1.el7sat.noarch.rpm
+ADD pulp-docker-plugins-0.1.1-1.el7sat.noarch.rpm
+RUN yum install -y python-pulp-docker-common-0.1.1-1.el7sat.noarch.rpm \
+    pulp-docker-plugins-0.1.1-1.el7sat.noarch.rpm
 
-RUN /opt/pulp_docker/manage_setup_pys.sh develop
+#RUN /opt/pulp_docker/manage_setup_pys.sh develop
 
-RUN python /opt/pulp_docker/pulp-dev.py -I
+#RUN python /opt/pulp_docker/pulp-dev.py -I
 
 # HACK: may not be needed
 #RUN touch /etc/pulp/vhosts80/blank.conf
