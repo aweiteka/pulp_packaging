@@ -150,16 +150,20 @@ class Pulp(object):
         """Format output of commands"""
         if self.args.mode == "list":
             if self.args.list_item == "repos":
-                regex = re.compile(r'repo-registry-id:(.+$)', re.I)
+                for item in output.splitlines():
+                    if "Repo-registry-id" in item:
+                        print item.split(":")[1].strip()
+
             else:
-                regex = re.compile(r'image id:(.+$)', re.I)
-            for out in output.stdout:
-                line = regex.search(out)
-                if line:
-                    print line.group(1).strip()
+                for item in output.splitlines():
+                    if "Image Id" in item:
+                        print "\n" + item.split(":")[1].strip(),
+                    elif "Size" in item:
+                        print '{0: <12}'.format(item.split(":")[1].strip() + "k"),
+                    elif "Tags" in item:
+                        print item.split(":")[1].strip(),
         else:
-            for out in output.stdout:
-                print out.strip()
+            print output
 
 
 class Command(object):
@@ -183,8 +187,7 @@ class Command(object):
             subprocess.call(cmd)
         else:
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-            proc.wait()
-            return proc
+            return proc.communicate()[0]
 
 
 def parse_args():
