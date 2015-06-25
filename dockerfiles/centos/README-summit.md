@@ -25,7 +25,7 @@ The Pulp Service Architecture is a multi-service application composed of an Apac
 **Celery Beat** Controls the task queue. See `explanation of Celery <https://fedorahosted.org/pulp/wiki/celery>`_                                                                                
 **Celery worker** Performs tasks in the queue. Multiple workers are spawned to handle load.                                                                                                         
 
-## Server -- DOCKER
+## DOCKER
 
 ### Requirements
 
@@ -82,7 +82,7 @@ docker run -v $DROOT/etc/pulp:/etc/pulp -v $DROOT/etc/pki/pulp:/etc/pki/pulp -v 
 docker run -v $DROOT/etc/pulp:/etc/pulp -v $DROOT/etc/pki/pulp:/etc/pki/pulp -v $DROOT/var/lib/pulp:/var/lib/pulp -v /dev/log:/dev/log" -v $DROOT/var/log/httpd-crane:/var/log/httpd -d --name crane -p 5000:80 pulp/crane-allinone
 ```
 
-## Server -- KUBERNETES
+## KUBERNETES
 
 1. Edit the service files with the IP address of the deployment environment:
 
@@ -143,7 +143,7 @@ spec:
 
 #### Replication Controllers
 
-1. Edit the apache replication controller file.
+1. Edit the apache replication controller file. Change values for hostname, container ports (80, 443 default), SSL certificate and storage path.
 
 
 ```
@@ -167,15 +167,15 @@ spec:
         imagePullPolicy: Always
         name: pulp-apache
         ports:
-        - containerPort: 80
+        - containerPort: CHANGEME
           protocol: TCP
-        - containerPort: 443
+        - containerPort: CHANGEME
           protocol: TCP
         env:
         - name: PULP_SERVER_NAME
-          value: pulp.example.com
+          value: CHANGEME
         - name: SSL_TARBALL_URL
-          value: http://refarch.cloud.lab.eng.bos.redhat.com/pub/users/mlamouri/apache_ssl_keys.tar
+          value: CHANGEME
         volumeMounts:
         - mountPath: /dev/log
           name: devlog
@@ -196,6 +196,69 @@ spec:
         name: varlibpulp
 ```
 
+Update the beat replication controller with the desired hostname:
+
+```
+apiVersion: v1beta3
+kind: ReplicationController
+metadata:
+  name: pulp-beat-rc
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: pulp-beat
+    spec:
+      containers:
+      - capabilities: {}
+        image: markllama/pulp-beat-centos
+        imagePullPolicy: Always
+        name: pulp-beat
+        env:
+        - name: PULP_SERVER_NAME
+          value: CHANGEME
+        volumeMounts:
+        - mountPath: /dev/log
+          name: devlog
+      restartPolicy: Always
+      volumes:
+      - hostPath:
+          path: /dev/log
+        name: devlog
+```
+
+Update the resource manager replicatoin controller with the desired hostname:
+
+```
+apiVersion: v1beta3
+kind: ReplicationController
+metadata:
+  name: pulp-resource-manager-rc
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: pulp-resource-manager
+    spec:
+      containers:
+      - capabilities: {}
+        image: markllama/pulp-resource-manager
+        imagePullPolicy: Always
+        name: pulp-resource-manager
+        env:
+        - name: PULP_SERVER_NAME
+          value: CHANGEME
+        volumeMounts:
+        - mountPath: /dev/log
+          name: devlog
+      restartPolicy: Always
+      volumes:
+      - hostPath:
+          path: /dev/log
+        name: devlog
+```
 Run `kubectl` commands to create the replication controllers:
 
 ```
