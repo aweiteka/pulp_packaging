@@ -8,18 +8,6 @@ Pulp 2.5 with the pulp_docker plugin supports docker content and can serve as a 
 
 ## Components
 
-+----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| pulp server                      | version 2.5 or greater. Includes a web server, mongo database and messaging broker                                                                              |
-+----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Pulp admin client                | remote management client, available as a `docker container <https://hub.docker.com/u/pulp/pulp-admin/>`_                                           |
-+----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| pulp_docker plugin               | adds support for docker content type (`unreleased <https://github.com/pulp/pulp_docker>`_)                                                                      |
-+----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Crane                            | partial implementation of the `docker registry protocol <https://docs.docker.com/reference/api/registry_api/>`_ (`unreleased <https://github.com/pulp/crane>`_) |
-+----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| registry-admin.py                | prototype script based on pulp-admin client providing docker-focused managament of pulp registry                                                                |
-+----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------+
-
 Pulp packaged as a set of Docker images is based on the CentOS 7 image.
 
 Click here to access the repository containing Dockerfiles for Pulp: `Dockerfile Source <https://github.com/pulp/pulp_packaging/blob/master/dockerfiles/centos>`_
@@ -28,24 +16,14 @@ Click here to access the repository containing Dockerfiles for Pulp: `Dockerfile
 
 The Pulp Service Architecture is a multi-service application composed of an Apache web server, MongoDB and QPID for messaging. Tasks are performed using a Celery distributed task queue. Workers can be added to scale the architecture. Administrative commands are performed remotely using the pulp-admin client.
 
-The above figure details the deployment of the Pulp Service architecture.
 
-+---------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| **Component** | **Role**                                                                                                                                                                          |
-+---------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Apache        | Web server application (Pulp API) and serves files (RPMs, Docker images, etc). It responds to pulp-admin requests.                                                                |
-+---------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| MongoDB       | Database                                                                                                                                                                          |
-+---------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Crane         | An Apache server that responds to Docker Registry API calls. Implementation of the `Docker registry protocol <https://docs.docker.com/reference/api/registry_api/>`_.                                                                       |
-+---------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| QPID          | The open-source messaging system that implements Apache Message Queuing Protocol (AMQP). Passes messages from Apache to CeleryBeat and the Pulp Resource Manager.                 |
-+---------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Celery Beat   | Controls the task queue. See `explanation of Celery <https://fedorahosted.org/pulp/wiki/celery>`_                                                                                 |
-+---------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Celery worker | Performs tasks in the queue. Multiple workers are spawned to handle load.                                                                                                         |
-+---------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+**Apache** Web server application (Pulp API) and serves files (RPMs, Docker images, etc). It responds to pulp-admin requests.                                                        
+** MongoDB** Database                                                                                                           
+**Crane** An Apache server that responds to Docker Registry API calls. Implementation of the [Docker registry protocol](https://docs.docker.com/reference/api/registry_api/)
 
+**QPID** The open-source messaging system that implements Apache Message Queuing Protocol (AMQP). Passes messages from Apache to CeleryBeat and the Pulp Resource Manager.                
+**Celery Beat** Controls the task queue. See `explanation of Celery <https://fedorahosted.org/pulp/wiki/celery>`_                                                                                
+**Celery worker** Performs tasks in the queue. Multiple workers are spawned to handle load.                                                                                                         
 
 ## Server -- DOCKER
 
@@ -103,32 +81,6 @@ docker run -v $DROOT/etc/pulp:/etc/pulp -v $DROOT/etc/pki/pulp:/etc/pki/pulp -v 
 docker run -v $DROOT/etc/pulp:/etc/pulp -v $DROOT/etc/pki/pulp:/etc/pki/pulp -v $DROOT/var/lib/pulp:/var/lib/pulp -v /dev/log:/dev/log" -v $DROOT/var/log/httpd-pulpapi:/var/log/httpd $LINKS -d --name pulpapi --hostname pulpapi -p 443:443 -p 80:80 pulp/apache
 docker run -v $DROOT/etc/pulp:/etc/pulp -v $DROOT/etc/pki/pulp:/etc/pki/pulp -v $DROOT/var/lib/pulp:/var/lib/pulp -v /dev/log:/dev/log" -v $DROOT/var/log/httpd-crane:/var/log/httpd -d --name crane -p 5000:80 pulp/crane-allinone
 ```
-
-#### Install script
-
-
-1. Download the installer:
-
-        $ curl -O https://raw.githubusercontent.com/pulp/pulp_packaging/master/centos/install_pulp_server.sh
-
-1. Run `./start.sh /path/to/lotsof/storage` to pull and start all of the
-images for a multi-container Pulp server.
-
-Pulp will populate the given path with files it needs, such as config files and
-data directories. After running the start script for the first time, you can
-modify any settings you like within that path and restart the Pulp containers.
-
-### Stopping
-
-Run `./stop.sh` to stop and remove all of the Pulp containers, not including
-QPID and MongoDB. None of the Pulp containers contain state that is valuable,
-so it is safe to throw them away. That is the containerization best practice!
-
-You can then run the `start.sh` script again with the same file path, and it will
-re-use the existing QPID and MongoDB containers.
-
-**NOTE:** The pulp-data container exits immediately. It is a dependent volume container referenced by `--volumes-from`. It persists as a shared volume and cannot be removed while dependent containers are running.
-
 
 ## Server -- KUBERNETES
 
@@ -193,8 +145,6 @@ spec:
 
 1. Edit the apache replication controller file.
 
-1. asdaf
-
 
 ```
 apiVersion: v1beta3
@@ -245,6 +195,26 @@ spec:
           path: /opt/pulp/var/lib/pulp
         name: varlibpulp
 ```
+
+Run `kubectl` commands to create the replication controllers:
+
+```
+kubectl create -f pulp-apache-rc.yaml
+kubectl create -f pulp-beat-rc.yaml
+kubectl create -f pulp-db-rc.yaml
+kubectl create -f pulp-msg-rc.yaml
+kubectl create -f pulp-resource-manager-rc.yaml
+kubectl create -f pulp-worker-rc.yaml
+```
+
+Create the Service resources:
+
+```
+kubectl create -f pulp-db-service.yaml
+kubectl create -f pulp-msg-service.yaml
+kubectl create -f pulp-web-service.yaml
+```
+
 
 ## Remote Client
 
